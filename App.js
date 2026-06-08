@@ -12,7 +12,7 @@ const STAGES = [
   { key: 'seizure', label: 'Seizure' },
   { key: 'nonVerbal', label: 'Non-verbal' },
   { key: 'mobility', label: 'Mobility Issue' },
-  { key: 'fainting', label: 'Fainting' },
+  { key: 'fainting', label: 'Fainting' },	
 ];
 
 function formatTime(seconds) {
@@ -157,6 +157,28 @@ export default function App() {
           );
         })}
       </View>
+      <Text style={styles.sectionTitle}>Recent Episodes</Text>
+
+{episodes.length === 0 ? (
+  <Text style={styles.emptyText}>No episodes saved yet.</Text>
+) : (
+  episodes.map((episode) => (
+    <View key={episode.id} style={styles.episodeCard}>
+      <Text style={styles.episodeTitle}>
+        Episode - {formatTime(episode.durationSeconds)}
+      </Text>
+
+      <Text style={styles.episodeText}>
+        Stage changes: {episode.stageLog.length}
+      </Text>
+
+      <Text style={styles.episodeText}>
+        Started: {new Date(episode.startTime).toLocaleTimeString()}
+      </Text>
+    </View>
+  ))
+)}
+
 
       <StatusBar style="auto" />
     </ScrollView>
@@ -251,4 +273,22 @@ const styles = StyleSheet.create({
   stageButtonTextActive: {
     color: 'white',
   },
+  episodeCard: {
+  backgroundColor: 'white',
+  borderRadius: 18,
+  padding: 18,
+  marginBottom: 12,
+},
+episodeTitle: {
+  fontSize: 18,
+  fontWeight: '700',
+},
+episodeText: {
+  fontSize: 15,
+  marginTop: 4,
+},
+emptyText: {
+  fontSize: 16,
+  opacity: 0.6,
+},
 });

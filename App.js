@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 
+
 const STAGES = [
   { key: 'seizure', label: 'Seizure' },
   { key: 'nonVerbal', label: 'Non-verbal' },
@@ -113,6 +114,22 @@ export default function App() {
   const selectedEpisode = episodes.find(
     (episode) => episode.id === selectedEpisodeId
   );
+
+const totalEpisodes = episodes.length;
+
+const averageDuration =
+  totalEpisodes === 0
+    ? 0
+    : Math.floor(
+        episodes.reduce((sum, episode) => sum + episode.durationSeconds, 0) /
+          totalEpisodes
+      );
+
+const longestEpisode =
+  totalEpisodes === 0
+    ? 0
+    : Math.max(...episodes.map((episode) => episode.durationSeconds));
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -373,6 +390,16 @@ if (selectedEpisode) {
       <Text style={styles.title}>Shalom</Text>
       <Text style={styles.subtitle}>Care Episode Tracker</Text>
 
+     <View style={styles.summaryCard}>
+  <Text style={styles.summaryText}>Total Episodes: {totalEpisodes}</Text>
+  <Text style={styles.summaryText}>
+    Average Duration: {formatTime(averageDuration)}
+  </Text>
+  <Text style={styles.summaryText}>
+    Longest Episode: {formatTime(longestEpisode)}
+  </Text>
+</View>
+
       <View style={styles.timerCard}>
         <Text style={styles.label}>
           {isTracking ? 'Episode in progress' : 'Ready to track'}
@@ -628,5 +655,16 @@ shareButtonText: {
   color: 'white',
   fontSize: 18,
   fontWeight: '700',
+},
+	summaryCard: {
+  backgroundColor: 'white',
+  borderRadius: 18,
+  padding: 18,
+  marginBottom: 24,
+},
+summaryText: {
+  fontSize: 17,
+  fontWeight: '600',
+  marginBottom: 6,
 },
 });

@@ -26,6 +26,35 @@ function formatTime(seconds) {
     .join(':');
 }
 
+function getStageLabel(stageKey) {
+  const stage = STAGES.find((item) => item.key === stageKey);
+  return stage ? stage.label : stageKey;
+}
+
+function calculateStageDurations(stageLog) {
+  const totals = {
+    seizure: 0,
+    nonVerbal: 0,
+    mobility: 0,
+    fainting: 0,
+  };
+
+  const activeStarts = {};
+
+  stageLog.forEach((item) => {
+    if (item.action === 'started') {
+      activeStarts[item.stage] = item.episodeTimeSeconds;
+    }
+
+    if (item.action === 'ended' && activeStarts[item.stage] !== undefined) {
+      totals[item.stage] += item.episodeTimeSeconds - activeStarts[item.stage];
+      delete activeStarts[item.stage];
+    }
+  });
+
+  return totals;
+}
+
 export default function App() {
   const [isTracking, setIsTracking] = useState(false);
   const [startTime, setStartTime] = useState(null);
@@ -69,15 +98,32 @@ export default function App() {
   }
 
   function endEpisode() {
+  let finalStageLog = [...stageLog];
+
+  Object.keys(activeStages).forEach((stageKey) => {
+    if (activeStages[stageKey]) {
+      finalStageLog.push({
+        stage: stageKey,
+        action: 'ended',
+        timestamp: Date.now(),
+        episodeTimeSeconds: duration,
+      });
+    }
+  });
+
+  const stageDurations = calculateStageDurations(finalStageLog);
+
   const finishedEpisode = {
-   id: Date.now().toString(),
-   startTime,
-   endTime: Date.now(),
-   durationSeconds: duration,
-   stageLog,
-   notes: '',
+    id: Date.now().toString(),
+    startTime,
+    endTime: Date.now(),
+    durationSeconds: duration,
+    stageLog: finalStageLog,
+    stageDurations,
+    notes: '',
   };
 
+ 
   setEpisodes((currentEpisodes) => [finishedEpisode, ...currentEpisodes]);
 
   setIsTracking(false);
@@ -158,6 +204,17 @@ if (selectedEpisode) {
         }
       />
 
+
+<Text style={styles.sectionTitle}>Stage Durations</Text>
+
+<View style={styles.episodeCard}>
+  {STAGES.map((stage) => (
+    <Text key={stage.key} style={styles.episodeText}>
+      {stage.label}: {formatTime(selectedEpisode.stageDurations?.[stage.key] || 0)}
+    </Text>
+  ))}
+</View>
+
       <Text style={styles.sectionTitle}>Stage Timeline</Text>
 
       {selectedEpisode.stageLog.length === 0 ? (
@@ -166,7 +223,7 @@ if (selectedEpisode) {
         selectedEpisode.stageLog.map((item, index) => (
           <View key={index} style={styles.timelineItem}>
             <Text style={styles.episodeTitle}>
-              {item.stage} {item.action}
+             {getStageLabel(item.stage)} {item.action}
             </Text>
             <Text style={styles.episodeText}>
               At {formatTime(item.episodeTimeSeconds)}

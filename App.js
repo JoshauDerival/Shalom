@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
@@ -7,6 +8,7 @@ import {
   Text,
   TextInput,
   View,
+  Alert,
 } from 'react-native';
 
 const STAGES = [
@@ -55,6 +57,8 @@ function calculateStageDurations(stageLog) {
   return totals;
 }
 
+const STORAGE_KEY = 'shalom_episodes';
+
 export default function App() {
   const [isTracking, setIsTracking] = useState(false);
   const [startTime, setStartTime] = useState(null);
@@ -83,6 +87,36 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [isTracking, startTime]);
+
+useEffect(() => {
+  async function loadEpisodes() {
+    try {
+      const savedEpisodes = await AsyncStorage.getItem(STORAGE_KEY);
+
+      if (savedEpisodes) {
+        setEpisodes(JSON.parse(savedEpisodes));
+      }
+    } catch (error) {
+      console.log('Failed to load episodes:', error);
+    }
+  }
+
+  loadEpisodes();
+}, []);
+
+useEffect(() => {
+  async function saveEpisodes() {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(episodes));
+    } catch (error) {
+      console.log('Failed to save episodes:', error);
+    }
+  }
+
+  saveEpisodes();
+}, [episodes]);
+
+
 
   function startEpisode() {
     setIsTracking(true);
@@ -115,6 +149,7 @@ export default function App() {
 
   const finishedEpisode = {
     id: Date.now().toString(),
+    title: `Episode ${new Date().toLocaleDateString()}`,
     startTime,
     endTime: Date.now(),
     durationSeconds: duration,
@@ -147,6 +182,14 @@ function updateEpisodeNotes(episodeId, notes) {
   );
 }
 
+function updateEpisodeTitle(episodeId, title) {
+  setEpisodes((currentEpisodes) =>
+    currentEpisodes.map((episode) =>
+      episode.id === episodeId ? { ...episode, title } : episode
+    )
+  );
+}
+
   function toggleStage(stageKey) {
     if (!isTracking) return;
 
@@ -165,6 +208,14 @@ function updateEpisodeNotes(episodeId, notes) {
       },
     ]);
   }
+
+function deleteEpisode(episodeId) {
+  setEpisodes((currentEpisodes) =>
+    currentEpisodes.filter((episode) => episode.id !== episodeId)
+  );
+
+  setSelectedEpisodeId(null);
+}
 
 if (selectedEpisode) {
   return (
@@ -190,7 +241,19 @@ if (selectedEpisode) {
         <Text style={styles.episodeText}>
           Ended: {new Date(selectedEpisode.endTime).toLocaleString()}
         </Text>
+
       </View>
+	
+      <Text style={styles.sectionTitle}>Episode Name</Text>
+
+<TextInput
+  style={styles.singleLineInput}
+  placeholder="Episode name"
+  value={selectedEpisode.title}
+  onChangeText={(text) =>
+    updateEpisodeTitle(selectedEpisode.id, text)
+  }
+/>
 
       <Text style={styles.sectionTitle}>Notes</Text>
 
@@ -204,6 +267,28 @@ if (selectedEpisode) {
         }
       />
 
+	 <Pressable
+  style={styles.deleteButton}
+  onPress={() => {
+    Alert.alert(
+      'Delete episode?',
+      'This cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteEpisode(selectedEpisode.id),
+        },
+      ]
+    );
+  }}
+>
+  <Text style={styles.deleteButtonText}>Delete Episode</Text>
+</Pressable>
 
 <Text style={styles.sectionTitle}>Stage Durations</Text>
 
@@ -236,6 +321,7 @@ if (selectedEpisode) {
     </ScrollView>
   );
 }
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -300,7 +386,7 @@ if (selectedEpisode) {
       onPress={() => setSelectedEpisodeId(episode.id)}
     >
       <Text style={styles.episodeTitle}>
-        Episode - {formatTime(episode.durationSeconds)}
+	  {episode.title || 'Episode'} - {formatTime(episode.durationSeconds)}
       </Text>
 
       <Text style={styles.episodeText}>
@@ -324,6 +410,7 @@ if (selectedEpisode) {
     </ScrollView>
   );
 }
+
 
 
 
@@ -465,5 +552,24 @@ openText: {
   fontSize: 15,
   fontWeight: '700',
   marginTop: 10,
+},
+deleteButton: {
+  backgroundColor: '#7f1d1d',
+  paddingVertical: 16,
+  borderRadius: 16,
+  alignItems: 'center',
+  marginBottom: 24,
+},
+deleteButtonText: {
+  color: 'white',
+  fontSize: 18,
+  fontWeight: '700',
+},
+singleLineInput: {
+  backgroundColor: 'white',
+  borderRadius: 16,
+  padding: 16,
+  fontSize: 17,
+  marginBottom: 24,
 },
 });

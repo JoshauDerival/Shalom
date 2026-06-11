@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import {
   Pressable,
   ScrollView,
@@ -31,6 +33,40 @@ function formatTime(seconds) {
 function getStageLabel(stageKey) {
   const stage = STAGES.find((item) => item.key === stageKey);
   return stage ? stage.label : stageKey;
+}
+
+async function shareEpisodeReport(episode) {
+  const report = `
+Shalom Episode Report
+
+Episode: ${episode.title || 'Untitled Episode'}
+Started: ${new Date(episode.startTime).toLocaleString()}
+Ended: ${new Date(episode.endTime).toLocaleString()}
+Total Duration: ${formatTime(episode.durationSeconds)}
+
+Stage Durations:
+${STAGES.map(
+  (stage) =>
+    `${stage.label}: ${formatTime(episode.stageDurations?.[stage.key] || 0)}`
+).join('\n')}
+
+Notes:
+${episode.notes || 'No notes added.'}
+
+Stage Timeline:
+${episode.stageLog
+  .map(
+    (item) =>
+      `${formatTime(item.episodeTimeSeconds)} - ${getStageLabel(item.stage)} ${item.action}`
+  )
+  .join('\n')}
+`;
+
+  const fileUri = FileSystem.documentDirectory + `shalom-report-${episode.id}.txt`;
+
+  await FileSystem.writeAsStringAsync(fileUri, report);
+
+  await Sharing.shareAsync(fileUri);
 }
 
 function calculateStageDurations(stageLog) {
@@ -267,6 +303,8 @@ if (selectedEpisode) {
         }
       />
 
+
+
 	 <Pressable
   style={styles.deleteButton}
   onPress={() => {
@@ -299,6 +337,13 @@ if (selectedEpisode) {
     </Text>
   ))}
 </View>
+
+	  <Pressable
+  style={styles.shareButton}
+  onPress={() => shareEpisodeReport(selectedEpisode)}
+>
+  <Text style={styles.shareButtonText}>Share Report</Text>
+</Pressable>
 
       <Text style={styles.sectionTitle}>Stage Timeline</Text>
 
@@ -571,5 +616,17 @@ singleLineInput: {
   padding: 16,
   fontSize: 17,
   marginBottom: 24,
+},
+	shareButton: {
+  backgroundColor: '#111827',
+  paddingVertical: 16,
+  borderRadius: 16,
+  alignItems: 'center',
+  marginBottom: 12,
+},
+shareButtonText: {
+  color: 'white',
+  fontSize: 18,
+  fontWeight: '700',
 },
 });

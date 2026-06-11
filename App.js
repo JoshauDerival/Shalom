@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -39,6 +40,10 @@ export default function App() {
 
   const [stageLog, setStageLog] = useState([]);
   const [episodes, setEpisodes] = useState([]);
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState(null);
+  const selectedEpisode = episodes.find(
+    (episode) => episode.id === selectedEpisodeId
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -64,13 +69,14 @@ export default function App() {
   }
 
   function endEpisode() {
-    const finishedEpisode = {
-      id: Date.now().toString(),
-      startTime,
-      endTime: Date.now(),
-      durationSeconds: duration,
-      stageLog,
-    };
+  const finishedEpisode = {
+   id: Date.now().toString(),
+   startTime,
+   endTime: Date.now(),
+   durationSeconds: duration,
+   stageLog,
+   notes: '',
+  };
 
   setEpisodes((currentEpisodes) => [finishedEpisode, ...currentEpisodes]);
 
@@ -85,6 +91,14 @@ export default function App() {
     mobility: false,
     fainting: false,
   });
+}
+
+function updateEpisodeNotes(episodeId, notes) {
+  setEpisodes((currentEpisodes) =>
+    currentEpisodes.map((episode) =>
+      episode.id === episodeId ? { ...episode, notes } : episode
+    )
+  );
 }
 
   function toggleStage(stageKey) {
@@ -105,6 +119,66 @@ export default function App() {
       },
     ]);
   }
+
+if (selectedEpisode) {
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Episode Details</Text>
+
+      <Pressable
+        style={styles.backButton}
+        onPress={() => setSelectedEpisodeId(null)}
+      >
+        <Text style={styles.backButtonText}>Back</Text>
+      </Pressable>
+
+      <View style={styles.episodeCard}>
+        <Text style={styles.episodeTitle}>
+          Duration: {formatTime(selectedEpisode.durationSeconds)}
+        </Text>
+
+        <Text style={styles.episodeText}>
+          Started: {new Date(selectedEpisode.startTime).toLocaleString()}
+        </Text>
+
+        <Text style={styles.episodeText}>
+          Ended: {new Date(selectedEpisode.endTime).toLocaleString()}
+        </Text>
+      </View>
+
+      <Text style={styles.sectionTitle}>Notes</Text>
+
+      <TextInput
+        style={styles.notesInput}
+        placeholder="Write notes about what happened..."
+        multiline
+        value={selectedEpisode.notes}
+        onChangeText={(text) =>
+          updateEpisodeNotes(selectedEpisode.id, text)
+        }
+      />
+
+      <Text style={styles.sectionTitle}>Stage Timeline</Text>
+
+      {selectedEpisode.stageLog.length === 0 ? (
+        <Text style={styles.emptyText}>No stages were toggled.</Text>
+      ) : (
+        selectedEpisode.stageLog.map((item, index) => (
+          <View key={index} style={styles.timelineItem}>
+            <Text style={styles.episodeTitle}>
+              {item.stage} {item.action}
+            </Text>
+            <Text style={styles.episodeText}>
+              At {formatTime(item.episodeTimeSeconds)}
+            </Text>
+          </View>
+        ))
+      )}
+
+      <StatusBar style="auto" />
+    </ScrollView>
+  );
+}
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -157,13 +231,17 @@ export default function App() {
           );
         })}
       </View>
-      <Text style={styles.sectionTitle}>Recent Episodes</Text>
+<Text style={styles.sectionTitle}>Recent Episodes</Text>
 
 {episodes.length === 0 ? (
   <Text style={styles.emptyText}>No episodes saved yet.</Text>
 ) : (
   episodes.map((episode) => (
-    <View key={episode.id} style={styles.episodeCard}>
+    <Pressable
+      key={episode.id}
+      style={styles.episodeCard}
+      onPress={() => setSelectedEpisodeId(episode.id)}
+    >
       <Text style={styles.episodeTitle}>
         Episode - {formatTime(episode.durationSeconds)}
       </Text>
@@ -175,15 +253,22 @@ export default function App() {
       <Text style={styles.episodeText}>
         Started: {new Date(episode.startTime).toLocaleTimeString()}
       </Text>
-    </View>
+
+      <Text style={styles.episodeText}>
+        Notes: {episode.notes ? 'Added' : 'No notes yet'}
+      </Text>
+
+      <Text style={styles.openText}>Tap to view details</Text>
+    </Pressable>
   ))
 )}
-
 
       <StatusBar style="auto" />
     </ScrollView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -290,5 +375,38 @@ episodeText: {
 emptyText: {
   fontSize: 16,
   opacity: 0.6,
+},
+
+backButton: {
+  backgroundColor: 'white',
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  borderRadius: 14,
+  marginBottom: 20,
+},
+backButtonText: {
+  fontSize: 18,
+  fontWeight: '700',
+  textAlign: 'center',
+},
+notesInput: {
+  backgroundColor: 'white',
+  minHeight: 140,
+  borderRadius: 18,
+  padding: 18,
+  fontSize: 17,
+  textAlignVertical: 'top',
+  marginBottom: 24,
+},
+timelineItem: {
+  backgroundColor: 'white',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 10,
+},
+openText: {
+  fontSize: 15,
+  fontWeight: '700',
+  marginTop: 10,
 },
 });
